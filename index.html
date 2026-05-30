@@ -14,8 +14,24 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    font-family: Georgia, serif;
+    padding: 32px 16px;
   }
+
+  #layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .end-photo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .photo-top  { align-self: flex-start; margin-bottom: 10px; }
+  .photo-bottom { align-self: flex-end; margin-top: 10px; }
 
   canvas {
     display: block;
@@ -24,7 +40,6 @@
     cursor: default;
   }
 
-  /* ── Win overlay ── */
   #win {
     display: none;
     position: fixed;
@@ -36,45 +51,35 @@
     z-index: 10;
   }
   #win.show { display: flex; }
-
-  #win img {
-    width: 280px;
-    height: 280px;
-    object-fit: cover;
-    border-radius: 8px;
-  }
+  #win img { width: 280px; height: 280px; object-fit: cover; }
 </style>
 </head>
 <body>
 
-<canvas id="c"></canvas>
+<div id="layout">
+  <img class="end-photo photo-top" src="start.JPG" alt="">
+  <canvas id="c"></canvas>
+  <img class="end-photo photo-bottom" src="end.PNG" alt="">
+</div>
 
-<!-- WIN SCREEN — swap win.jpg for your own photo filename -->
 <div id="win">
   <img src="win.jpg" alt="">
 </div>
 
 <script>
-// ─── PHOTOS ──────────────────────────────────────────────────────────────────
-// Replace these filenames with your own images in the same folder as index.html
-const START_IMG = "start.JPG";   // shown at the start cell (top-left)
-const END_IMG   = "end.PNG";     // shown at the end cell (bottom-right)
-const PIECE_IMG = "piece.PNG";   // the photo you drag through the maze
-// ─────────────────────────────────────────────────────────────────────────────
+const PIECE_IMG = "piece.PNG";
 
 const COLS = 15, ROWS = 15;
 const WALL_COLOR = "#8B6347";
-const BG_COLOR   = "#ffffff";
 
 const canvas = document.getElementById("c");
-const ctx    = canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 
 let CELL = 36;
 let maze = [], piece = { col: 0, row: 0, x: 0, y: 0 };
 let dragging = false, offset = { x: 0, y: 0 };
 let solved = false;
 
-// Load images
 const imgs = {};
 function loadImg(key, src) {
   const i = new Image();
@@ -82,16 +87,12 @@ function loadImg(key, src) {
   i.onload = () => { imgs[key] = i; draw(); };
   imgs[key] = null;
 }
-loadImg("start", START_IMG);
-loadImg("end",   END_IMG);
 loadImg("piece", PIECE_IMG);
 
-// ── Maze gen (recursive backtracker + extra loops) ───────────────────────────
 function generate() {
   const g = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () =>
       ({ v: false, w: { top: true, right: true, bottom: true, left: true } })));
-
   function carve(c, r) {
     g[r][c].v = true;
     for (const [dc, dr, a, b] of shuffle([[0,-1,"top","bottom"],[1,0,"right","left"],[0,1,"bottom","top"],[-1,0,"left","right"]])) {
@@ -102,13 +103,11 @@ function generate() {
     }
   }
   carve(0, 0);
-
-  // extra openings → harder / more choices
   for (let i = 0; i < Math.floor(COLS * ROWS * 0.08); i++) {
     const c = Math.floor(Math.random() * (COLS - 1));
     const r = Math.floor(Math.random() * (ROWS - 1));
     if (Math.random() < 0.5) { g[r][c].w.right = false; g[r][c+1].w.left = false; }
-    else                      { g[r][c].w.bottom = false; g[r+1][c].w.top = false; }
+    else { g[r][c].w.bottom = false; g[r+1][c].w.top = false; }
   }
   return g;
 }
@@ -120,15 +119,13 @@ function shuffle(a) {
   return a;
 }
 
-// ── Draw ─────────────────────────────────────────────────────────────────────
 function center(col, row) { return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 }; }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = BG_COLOR;
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // walls
   ctx.strokeStyle = WALL_COLOR;
   ctx.lineWidth = 2;
   ctx.lineCap = "square";
@@ -142,11 +139,7 @@ function draw() {
     }
   }
 
-  // start & end photos
-  drawCircleImg(0,      0,      imgs.start);
-  drawCircleImg(COLS-1, ROWS-1, imgs.end);
-
-  // draggable piece
+  // piece
   const s = CELL * 0.72;
   ctx.save();
   ctx.shadowColor = "rgba(139,99,71,0.2)";
@@ -165,24 +158,6 @@ function draw() {
   ctx.stroke();
 }
 
-function drawCircleImg(col, row, img) {
-  const { x, y } = center(col, row);
-  const r = CELL * 0.36;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.clip();
-  if (img) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
-  else { ctx.fillStyle = "#faf8f5"; ctx.fill(); }
-  ctx.restore();
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.strokeStyle = "#c4a882";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-}
-
-// ── Drag ─────────────────────────────────────────────────────────────────────
 function xy(e) {
   const rect = canvas.getBoundingClientRect();
   const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
@@ -214,7 +189,6 @@ function move(e) {
   const p = xy(e);
   const nx = p.x - offset.x, ny = p.y - offset.y;
   const tc = Math.floor(nx / CELL), tr = Math.floor(ny / CELL);
-
   if (tc >= 0 && tc < COLS && tr >= 0 && tr < ROWS) {
     const dc = tc - piece.col, dr = tr - piece.row;
     if ((Math.abs(dc) === 1 && dr === 0) || (dc === 0 && Math.abs(dr) === 1)) {
@@ -231,7 +205,6 @@ function move(e) {
       }
     }
   }
-
   const c = center(piece.col, piece.row), lim = CELL * 0.42;
   piece.x = Math.max(c.x - lim, Math.min(c.x + lim, nx));
   piece.y = Math.max(c.y - lim, Math.min(c.y + lim, ny));
@@ -246,12 +219,18 @@ function up() {
   piece.x = c.x; piece.y = c.y; draw();
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
 function init() {
   const maxW = Math.min(window.innerWidth - 32, 580);
   CELL = Math.max(24, Math.floor(maxW / COLS));
   canvas.width  = COLS * CELL;
   canvas.height = ROWS * CELL;
+
+  const photoSize = Math.round(CELL * 2.8) + "px";
+  document.querySelectorAll(".end-photo").forEach(el => {
+    el.style.width = photoSize;
+    el.style.height = photoSize;
+  });
+
   maze = generate();
   const c = center(0, 0);
   piece = { col: 0, row: 0, x: c.x, y: c.y };
