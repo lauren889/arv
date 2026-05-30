@@ -1,11 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARV</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maze</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: Georgia, serif;
+  }
+
+  canvas {
+    display: block;
+    border: 1px solid #c4a882;
+    touch-action: none;
+    cursor: default;
+  }
+
+  /* ── Win overlay ── */
+  #win {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.97);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #win.show { display: flex; }
+
+  #win img {
+    width: 280px;
+    height: 280px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+</style>
 </head>
 <body>
-    <h1>ARV</h1>
+
+<canvas id="c"></canvas>
+
+<!-- WIN SCREEN — swap win.jpg for your own photo filename -->
+<div id="win">
+  <img src="win.jpg" alt="">
+</div>
+
+<script>
+// ─── PHOTOS ──────────────────────────────────────────────────────────────────
+// Replace these filenames with your own images in the same folder as index.html
+const START_IMG = "start.jpg";   // shown at the start cell (top-left)
+const END_IMG   = "end.jpg";     // shown at the end cell (bottom-right)
+const PIECE_IMG = "piece.jpg";   // the photo you drag through the maze
+// ─────────────────────────────────────────────────────────────────────────────
+
+const COLS = 15, ROWS = 15;
+const WALL_COLOR = "#8B6347";
+const BG_COLOR   = "#ffffff";
+
+const canvas = document.getElementById("c");
+const ctx    = canvas.getContext("2d");
+
+let CELL = 36;
+let maze = [], piece = { col: 0, row: 0, x: 0, y: 0 };
+let dragging = false, offset = { x: 0, y: 0 };
+let solved = false;
+
+// Load images
+const imgs = {};
+function loadImg(key, src) {
+  const i = new Image();
+  i.src = src;
+  i.onload = () => { imgs[key] = i; draw(); };
+  imgs[key] = null;
+}
+loadImg("start", START_IMG);
+loadImg("end",   END_IMG);
+loadImg("piece", PIECE_IMG);
+
+// ── Maze gen (recursive backtracker + extra loops) ───────────────────────────
+function generate() {
+  const g = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () =>
+      ({ v: false, w: { top: true, right: true, bottom: true, left: true } })));
+
+  function carve(c, r) {
+    g[r][c].v = true;
+    for (const [dc, dr, a, b] of shuffle([[0,-1,"top","bottom"],[1,0,"right","left"],[0,1,"bottom","top"],[-1,0,"left","right"]])) {
+      const nc = c + dc, nr = r + dr;
+      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !g[nr][nc].v) {
+        g[r][c].w[a] = false; g[nr][nc].w[b] = false; carve(nc, nr);
+      }
+    }
+  }
+  carve(0, 0);
+
+  // extra openings → harder / more choices
+  for (let i = 0; i < Math.floor(COLS * ROWS * 0.08); i++) {
+    const c = Math.floor(Math.random() * (COLS - 1));
+    const r = Math.floor(Math.random() * (ROWS - 1));
+    if (Math.random() < 0.5) { g[r][c].w.right = false; g[r][c+1].w.left = false; }
+    else                      { g[r][c].w.bottom = false; g[r+1][c].w.top = false; }
+  }
+  return g;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Draw ─────────────────────────────────────────────────────────────────────
+function center(col, row) { return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 }; }
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = BG_COLOR;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // walls
+  ctx.strokeStyle = WALL_COLOR;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "square";
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = c * CELL, y = r * CELL, w = maze[r][c].w;
+      if (w.top)    { ctx.beginPath(); ctx.moveTo(x, y);        ctx.lineTo(x+CELL, y);        ctx.stroke(); }
+      if (w.right)  { ctx.beginPath(); ctx.moveTo(x+CELL, y);   ctx.lineTo(x+CELL, y+CELL);   ctx.stroke(); }
+      if (w.bottom) { ctx.beginPath(); ctx.moveTo(x, y+CELL);   ctx.lineTo(x+CELL, y+CELL);   ctx.stroke(); }
+      if (w.left)   { ctx.beginPath(); ctx.moveTo(x, y);        ctx.lineTo(x, y+CELL);        ctx.stroke(); }
+    }
+  }
+
+  // start & end photos
+  drawCircleImg(0,      0,      imgs.start);
+  drawCircleImg(COLS-1, ROWS-1, imgs.end);
+
+  // draggable piece
+  const s = CELL * 0.72;
+  ctx.save();
+  ctx.shadowColor = "rgba(139,99,71,0.2)";
+  ctx.shadowBlur = dragging ? 14 : 6;
+  ctx.shadowOffsetY = dragging ? 4 : 2;
+  ctx.beginPath();
+  ctx.arc(piece.x, piece.y, s / 2, 0, Math.PI * 2);
+  ctx.clip();
+  if (imgs.piece) ctx.drawImage(imgs.piece, piece.x - s/2, piece.y - s/2, s, s);
+  else { ctx.fillStyle = "#fdf6ec"; ctx.fill(); }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(piece.x, piece.y, s / 2, 0, Math.PI * 2);
+  ctx.strokeStyle = dragging ? "#8B6347" : "#c4a882";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawCircleImg(col, row, img) {
+  const { x, y } = center(col, row);
+  const r = CELL * 0.36;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  if (img) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+  else { ctx.fillStyle = "#faf8f5"; ctx.fill(); }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = "#c4a882";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// ── Drag ─────────────────────────────────────────────────────────────────────
+function xy(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy };
+}
+
+canvas.addEventListener("mousedown",  down);
+canvas.addEventListener("touchstart", down, { passive: false });
+canvas.addEventListener("mousemove",  move);
+canvas.addEventListener("touchmove",  move, { passive: false });
+canvas.addEventListener("mouseup",    up);
+canvas.addEventListener("touchend",   up);
+
+function down(e) {
+  e.preventDefault();
+  const p = xy(e);
+  if (Math.hypot(p.x - piece.x, p.y - piece.y) < CELL * 0.5) {
+    dragging = true;
+    offset = { x: p.x - piece.x, y: p.y - piece.y };
+    canvas.style.cursor = "grabbing";
+  }
+}
+
+function move(e) {
+  if (!dragging || solved) return;
+  e.preventDefault();
+  const p = xy(e);
+  const nx = p.x - offset.x, ny = p.y - offset.y;
+  const tc = Math.floor(nx / CELL), tr = Math.floor(ny / CELL);
+
+  if (tc >= 0 && tc < COLS && tr >= 0 && tr < ROWS) {
+    const dc = tc - piece.col, dr = tr - piece.row;
+    if ((Math.abs(dc) === 1 && dr === 0) || (dc === 0 && Math.abs(dr) === 1)) {
+      const w = maze[piece.row][piece.col].w;
+      const ok = (dc===1&&!w.right)||(dc===-1&&!w.left)||(dr===1&&!w.bottom)||(dr===-1&&!w.top);
+      if (ok) {
+        piece.col = tc; piece.row = tr;
+        if (tc === COLS-1 && tr === ROWS-1) {
+          const c = center(tc, tr);
+          piece.x = c.x; piece.y = c.y; draw();
+          setTimeout(() => document.getElementById("win").classList.add("show"), 300);
+          solved = true; return;
+        }
+      }
+    }
+  }
+
+  const c = center(piece.col, piece.row), lim = CELL * 0.42;
+  piece.x = Math.max(c.x - lim, Math.min(c.x + lim, nx));
+  piece.y = Math.max(c.y - lim, Math.min(c.y + lim, ny));
+  draw();
+}
+
+function up() {
+  if (!dragging) return;
+  dragging = false;
+  canvas.style.cursor = "default";
+  const c = center(piece.col, piece.row);
+  piece.x = c.x; piece.y = c.y; draw();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+function init() {
+  const maxW = Math.min(window.innerWidth - 32, 580);
+  CELL = Math.max(24, Math.floor(maxW / COLS));
+  canvas.width  = COLS * CELL;
+  canvas.height = ROWS * CELL;
+  maze = generate();
+  const c = center(0, 0);
+  piece = { col: 0, row: 0, x: c.x, y: c.y };
+  draw();
+}
+
+init();
+</script>
 </body>
 </html>
