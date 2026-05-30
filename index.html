@@ -3,18 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maze</title>
+<title>For Arrin</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     background: #ffffff;
+    font-family: Georgia, serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Section 1: scanned letter ── */
+  #letter {
+    width: 100%;
+    max-width: 900px;
+    padding: 0;
+  }
+  #letter img {
+    width: 100%;
+    display: block;
+  }
+
+  /* ── Section 2: 12 months ── */
+  #months-section {
+    width: 100%;
+    max-width: 900px;
+    padding: 40px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  #months-title {
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    color: #cc0000;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  #months-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .month-box {
+    aspect-ratio: 1;
+    border: 2px solid #cc0000;
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    padding: 32px 16px;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+    transition: transform 0.15s;
+  }
+  .month-box:hover { transform: scale(1.03); }
+
+  .month-label {
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    color: #cc0000;
+    font-size: clamp(0.65rem, 2.5vw, 0.95rem);
+    text-align: center;
+    padding: 6px;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* revealed photo fills the box */
+  .month-box img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+  .month-box.open img  { display: block; }
+  .month-box.open .month-label { display: none; }
+
+  /* ── Divider ── */
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: #c4a882;
+    margin: 0 auto;
+  }
+
+  /* ── Section 3: please message ── */
+  #please-section {
+    width: 100%;
+    max-width: 900px;
+    padding: 40px 20px 20px;
+  }
+  #please-section img {
+    width: 100%;
+    display: block;
+  }
+
+  /* ── Section 4: maze ── */
+  #maze-section {
+    width: 100%;
+    max-width: 900px;
+    padding: 10px 16px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   #layout {
@@ -29,46 +132,195 @@
     object-fit: cover;
     display: block;
   }
+  .photo-top    { align-self: flex-start; margin-bottom: 10px; }
+  .photo-bottom { align-self: flex-end;   margin-top: 10px; }
 
-  .photo-top  { align-self: flex-start; margin-bottom: 10px; }
-  .photo-bottom { align-self: flex-end; margin-top: 10px; }
-
-  canvas {
+  #c {
     display: block;
     border: 1px solid #c4a882;
     touch-action: none;
     cursor: default;
   }
 
+  /* ── Win overlay ── */
   #win {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(255,255,255,0.97);
+    background: rgba(255,255,255,0.95);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    z-index: 100;
+    gap: 24px;
   }
   #win.show { display: flex; }
-  #win img { width: 280px; height: 280px; object-fit: cover; }
+  #win img.win-photo {
+    width: 280px;
+    height: 280px;
+    object-fit: cover;
+    position: relative;
+    z-index: 2;
+  }
+  #yippie {
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    font-size: clamp(3rem, 12vw, 6rem);
+    color: #ff0000;
+    position: relative;
+    z-index: 2;
+    animation: bounce 0.6s ease infinite alternate;
+  }
+  @keyframes bounce {
+    from { transform: scale(1)    rotate(-3deg); }
+    to   { transform: scale(1.08) rotate(3deg);  }
+  }
+  #fw {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* ── Month lightbox ── */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #lightbox.show { display: flex; }
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+  }
 </style>
 </head>
 <body>
 
-<div id="layout">
-  <img class="end-photo photo-top" src="start.JPG" alt="">
-  <canvas id="c"></canvas>
-  <img class="end-photo photo-bottom" src="end.PNG" alt="">
+<!-- ── 1. Scanned letter ── -->
+<div id="letter">
+  <!-- Replace letter.jpg with your scan of page 1 -->
+  <img src="letter.jpg" alt="Letter">
 </div>
 
+<!-- ── 2. 12 months ── -->
+<div id="months-section">
+  <div id="months-title">12 pics 4 our 12 months!</div>
+
+  <div id="months-grid">
+    <!-- Each box: change monthX.jpg to your photo for that month -->
+    <div class="month-box" onclick="openMonth(this, 'month1.jpg')">
+      <span class="month-label">Month 1</span>
+      <img src="month1.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month2.jpg')">
+      <span class="month-label">Month 2</span>
+      <img src="month2.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month3.jpg')">
+      <span class="month-label">Month 3</span>
+      <img src="month3.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month4.jpg')">
+      <span class="month-label">Month 4</span>
+      <img src="month4.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month5.jpg')">
+      <span class="month-label">Month 5</span>
+      <img src="month5.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month6.jpg')">
+      <span class="month-label">Month 6</span>
+      <img src="month6.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month7.jpg')">
+      <span class="month-label">Month 7</span>
+      <img src="month7.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month8.jpg')">
+      <span class="month-label">Month 8</span>
+      <img src="month8.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month9.jpg')">
+      <span class="month-label">Month 9</span>
+      <img src="month9.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month10.jpg')">
+      <span class="month-label">Month 10</span>
+      <img src="month10.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month11.jpg')">
+      <span class="month-label">Month 11</span>
+      <img src="month11.jpg" alt="">
+    </div>
+    <div class="month-box" onclick="openMonth(this, 'month12.jpg')">
+      <span class="month-label">Month 12</span>
+      <img src="month12.jpg" alt="">
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 3. Please message ── -->
+<div id="please-section">
+  <!-- Replace please.jpg with your scan of page 2 -->
+  <img src="please.jpg" alt="Please message">
+</div>
+
+<!-- ── 4. Maze ── -->
+<div id="maze-section">
+  <div id="layout">
+    <!-- Replace start.jpg / end.jpg / piece.jpg with your photos -->
+    <img class="end-photo photo-top" src="start.jpg" alt="">
+    <canvas id="c"></canvas>
+    <img class="end-photo photo-bottom" src="end.jpg" alt="">
+  </div>
+</div>
+
+<!-- Win overlay -->
 <div id="win">
-  <img src="win.jpg" alt="">
+  <canvas id="fw"></canvas>
+  <div id="yippie">yippie!</div>
+  <!-- Replace win.jpg with the photo to show on completion -->
+  <img class="win-photo" src="win.jpg" alt="">
+</div>
+
+<!-- Month lightbox (tap photo to enlarge) -->
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
 </div>
 
 <script>
-const PIECE_IMG = "piece.PNG";
+// ════════════════════════════════════════════
+//  MONTH BOXES
+// ════════════════════════════════════════════
+function openMonth(box, src) {
+  if (box.classList.contains("open")) {
+    // already open → show lightbox
+    showLightbox(src);
+    return;
+  }
+  box.classList.add("open");
+}
 
+function showLightbox(src) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("lightbox").classList.add("show");
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("show");
+}
+
+// ════════════════════════════════════════════
+//  MAZE
+// ════════════════════════════════════════════
+const PIECE_IMG = "piece.jpg";
 const COLS = 15, ROWS = 15;
 const WALL_COLOR = "#8B6347";
 
@@ -125,34 +377,31 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.strokeStyle = WALL_COLOR;
   ctx.lineWidth = 2;
   ctx.lineCap = "square";
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const x = c * CELL, y = r * CELL, w = maze[r][c].w;
-      if (w.top)    { ctx.beginPath(); ctx.moveTo(x, y);        ctx.lineTo(x+CELL, y);        ctx.stroke(); }
-      if (w.right)  { ctx.beginPath(); ctx.moveTo(x+CELL, y);   ctx.lineTo(x+CELL, y+CELL);   ctx.stroke(); }
-      if (w.bottom) { ctx.beginPath(); ctx.moveTo(x, y+CELL);   ctx.lineTo(x+CELL, y+CELL);   ctx.stroke(); }
-      if (w.left)   { ctx.beginPath(); ctx.moveTo(x, y);        ctx.lineTo(x, y+CELL);        ctx.stroke(); }
+      if (w.top)    { ctx.beginPath(); ctx.moveTo(x,y);       ctx.lineTo(x+CELL,y);       ctx.stroke(); }
+      if (w.right)  { ctx.beginPath(); ctx.moveTo(x+CELL,y);  ctx.lineTo(x+CELL,y+CELL);  ctx.stroke(); }
+      if (w.bottom) { ctx.beginPath(); ctx.moveTo(x,y+CELL);  ctx.lineTo(x+CELL,y+CELL);  ctx.stroke(); }
+      if (w.left)   { ctx.beginPath(); ctx.moveTo(x,y);       ctx.lineTo(x,y+CELL);       ctx.stroke(); }
     }
   }
-
-  // piece
   const s = CELL * 0.72;
   ctx.save();
   ctx.shadowColor = "rgba(139,99,71,0.2)";
   ctx.shadowBlur = dragging ? 14 : 6;
   ctx.shadowOffsetY = dragging ? 4 : 2;
   ctx.beginPath();
-  ctx.arc(piece.x, piece.y, s / 2, 0, Math.PI * 2);
+  ctx.arc(piece.x, piece.y, s/2, 0, Math.PI*2);
   ctx.clip();
-  if (imgs.piece) ctx.drawImage(imgs.piece, piece.x - s/2, piece.y - s/2, s, s);
+  if (imgs.piece) ctx.drawImage(imgs.piece, piece.x-s/2, piece.y-s/2, s, s);
   else { ctx.fillStyle = "#fdf6ec"; ctx.fill(); }
   ctx.restore();
   ctx.beginPath();
-  ctx.arc(piece.x, piece.y, s / 2, 0, Math.PI * 2);
+  ctx.arc(piece.x, piece.y, s/2, 0, Math.PI*2);
   ctx.strokeStyle = dragging ? "#8B6347" : "#c4a882";
   ctx.lineWidth = 1.5;
   ctx.stroke();
@@ -160,10 +409,10 @@ function draw() {
 
 function xy(e) {
   const rect = canvas.getBoundingClientRect();
-  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+  const sx = canvas.width/rect.width, sy = canvas.height/rect.height;
   const cx = e.touches ? e.touches[0].clientX : e.clientX;
   const cy = e.touches ? e.touches[0].clientY : e.clientY;
-  return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy };
+  return { x: (cx-rect.left)*sx, y: (cy-rect.top)*sy };
 }
 
 canvas.addEventListener("mousedown",  down);
@@ -176,9 +425,9 @@ canvas.addEventListener("touchend",   up);
 function down(e) {
   e.preventDefault();
   const p = xy(e);
-  if (Math.hypot(p.x - piece.x, p.y - piece.y) < CELL * 0.5) {
+  if (Math.hypot(p.x-piece.x, p.y-piece.y) < CELL*0.5) {
     dragging = true;
-    offset = { x: p.x - piece.x, y: p.y - piece.y };
+    offset = { x: p.x-piece.x, y: p.y-piece.y };
     canvas.style.cursor = "grabbing";
   }
 }
@@ -187,27 +436,26 @@ function move(e) {
   if (!dragging || solved) return;
   e.preventDefault();
   const p = xy(e);
-  const nx = p.x - offset.x, ny = p.y - offset.y;
-  const tc = Math.floor(nx / CELL), tr = Math.floor(ny / CELL);
+  const nx = p.x-offset.x, ny = p.y-offset.y;
+  const tc = Math.floor(nx/CELL), tr = Math.floor(ny/CELL);
   if (tc >= 0 && tc < COLS && tr >= 0 && tr < ROWS) {
-    const dc = tc - piece.col, dr = tr - piece.row;
-    if ((Math.abs(dc) === 1 && dr === 0) || (dc === 0 && Math.abs(dr) === 1)) {
+    const dc = tc-piece.col, dr = tr-piece.row;
+    if ((Math.abs(dc)===1&&dr===0)||(dc===0&&Math.abs(dr)===1)) {
       const w = maze[piece.row][piece.col].w;
       const ok = (dc===1&&!w.right)||(dc===-1&&!w.left)||(dr===1&&!w.bottom)||(dr===-1&&!w.top);
       if (ok) {
         piece.col = tc; piece.row = tr;
-        if (tc === COLS-1 && tr === ROWS-1) {
-          const c = center(tc, tr);
-          piece.x = c.x; piece.y = c.y; draw();
-          setTimeout(() => document.getElementById("win").classList.add("show"), 300);
+        if (tc===COLS-1 && tr===ROWS-1) {
+          const c = center(tc,tr); piece.x=c.x; piece.y=c.y; draw();
+          setTimeout(showWin, 300);
           solved = true; return;
         }
       }
     }
   }
-  const c = center(piece.col, piece.row), lim = CELL * 0.42;
-  piece.x = Math.max(c.x - lim, Math.min(c.x + lim, nx));
-  piece.y = Math.max(c.y - lim, Math.min(c.y + lim, ny));
+  const c = center(piece.col,piece.row), lim = CELL*0.42;
+  piece.x = Math.max(c.x-lim, Math.min(c.x+lim, nx));
+  piece.y = Math.max(c.y-lim, Math.min(c.y+lim, ny));
   draw();
 }
 
@@ -215,25 +463,83 @@ function up() {
   if (!dragging) return;
   dragging = false;
   canvas.style.cursor = "default";
-  const c = center(piece.col, piece.row);
-  piece.x = c.x; piece.y = c.y; draw();
+  const c = center(piece.col,piece.row);
+  piece.x=c.x; piece.y=c.y; draw();
 }
 
+// ── Fireworks ─────────────────────────────
+const fwCanvas = document.getElementById("fw");
+const fwCtx = fwCanvas.getContext("2d");
+let fwParticles = [], fwRaf = null, fwInterval = null;
+const FW_COLORS = ["#ff3366","#ff6600","#ffcc00","#00cc66","#00aaff","#cc44ff","#ff44aa","#ffffff"];
+
+function fwResize() { fwCanvas.width = window.innerWidth; fwCanvas.height = window.innerHeight; }
+
+function launch() {
+  const x = Math.random()*fwCanvas.width;
+  const y = Math.random()*fwCanvas.height*0.6;
+  const color = FW_COLORS[Math.floor(Math.random()*FW_COLORS.length)];
+  for (let i = 0; i < 90; i++) {
+    const angle = (Math.PI*2/90)*i + Math.random()*0.2;
+    const speed = 2 + Math.random()*5;
+    fwParticles.push({ x,y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed,
+      alpha:1, color, size:2+Math.random()*2, decay:0.012+Math.random()*0.01 });
+  }
+}
+
+function fwTick() {
+  fwCtx.fillStyle = "rgba(255,255,255,0.18)";
+  fwCtx.fillRect(0,0,fwCanvas.width,fwCanvas.height);
+  for (let i = fwParticles.length-1; i >= 0; i--) {
+    const p = fwParticles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.07; p.vx*=0.98; p.alpha-=p.decay;
+    if (p.alpha <= 0) { fwParticles.splice(i,1); continue; }
+    fwCtx.save();
+    fwCtx.globalAlpha = p.alpha;
+    fwCtx.fillStyle = p.color;
+    fwCtx.beginPath();
+    fwCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    fwCtx.fill();
+    fwCtx.restore();
+  }
+  fwRaf = requestAnimationFrame(fwTick);
+}
+
+function startFW() { fwResize(); fwParticles=[]; launch(); fwInterval=setInterval(launch,700); fwTick(); }
+function stopFW()  { clearInterval(fwInterval); cancelAnimationFrame(fwRaf); fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height); fwParticles=[]; }
+
+// ── Win ───────────────────────────────────
+let winTimeout = null;
+function showWin() {
+  document.getElementById("win").classList.add("show");
+  startFW();
+  winTimeout = setTimeout(hideWin, 15000);
+}
+function hideWin() {
+  clearTimeout(winTimeout);
+  stopFW();
+  document.getElementById("win").classList.remove("show");
+  solved = false;
+  const c = center(0,0);
+  piece = { col:0, row:0, x:c.x, y:c.y };
+  draw();
+}
+
+// ── Init ──────────────────────────────────
 function init() {
   const maxW = Math.min(window.innerWidth - 32, 580);
-  CELL = Math.max(24, Math.floor(maxW / COLS));
-  canvas.width  = COLS * CELL;
-  canvas.height = ROWS * CELL;
+  CELL = Math.max(24, Math.floor(maxW/COLS));
+  canvas.width  = COLS*CELL;
+  canvas.height = ROWS*CELL;
 
-  const photoSize = Math.round(CELL * 2.8) + "px";
+  const photoSize = Math.round(CELL*2.8)+"px";
   document.querySelectorAll(".end-photo").forEach(el => {
-    el.style.width = photoSize;
-    el.style.height = photoSize;
+    el.style.width = photoSize; el.style.height = photoSize;
   });
 
   maze = generate();
-  const c = center(0, 0);
-  piece = { col: 0, row: 0, x: c.x, y: c.y };
+  const c = center(0,0);
+  piece = { col:0, row:0, x:c.x, y:c.y };
   draw();
 }
 
