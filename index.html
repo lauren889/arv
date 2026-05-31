@@ -401,7 +401,7 @@ function draw() {
       if (w.left)   { ctx.beginPath(); ctx.moveTo(x,y);       ctx.lineTo(x,y+CELL);       ctx.stroke(); }
     }
   }
-  const s = CELL * 0.72;
+  const s = CELL * 1.1;
   ctx.save();
   ctx.shadowColor = "rgba(139,99,71,0.2)";
   ctx.shadowBlur = dragging ? 14 : 6;
