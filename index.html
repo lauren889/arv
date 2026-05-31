@@ -198,6 +198,19 @@
     object-fit: contain;
     border-radius: 4px;
   }
+ .center-photo {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.center-photo img {
+  width: 180px;      /* adjust size */
+  height: 180px;     /* adjust size */
+  object-fit: cover;
+  border-radius: 8px; /* optional */
+}
 </style>
 </head>
 <body>
@@ -207,7 +220,9 @@
   <!-- Replace letter.jpg with your scan of page 1 -->
   <img src="letter.jpg" alt="Letter">
 </div>
-
+<div class="center-photo">
+  <img src="green.jpg" alt="Center Photo">
+</div>
 <div id="please-section">
   <!-- Replace please.jpg with your scan of page 2 -->
   <img src="title.jpg" alt="Please message">
@@ -268,7 +283,9 @@
     </div>
   </div>
 </div>
-
+<div class="center-photo">
+  <img src="blue.jpg" alt="Center Photo">
+</div>
 
 <!-- ── 3. Please message ── -->
 <div id="please-section">
