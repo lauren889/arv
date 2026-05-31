@@ -6,7 +6,45 @@
 <title>For Arrin</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+ #password-screen {
+  position: fixed;
+  inset: 0;
+  background: white;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+.password-box {
+  text-align: center;
+  padding: 30px;
+}
+
+.password-box h2 {
+  margin-bottom: 15px;
+}
+
+.password-box p {
+  margin-bottom: 15px;
+}
+
+.password-box input {
+  padding: 10px;
+  font-size: 16px;
+  width: 250px;
+}
+
+.password-box button {
+  padding: 10px 16px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+#password-error {
+  color: red;
+  margin-top: 10px;
+}
   body {
     background: #ffffff;
     font-family: Georgia, serif;
@@ -206,7 +244,16 @@
 </style>
 </head>
 <body>
-
+<!-- Password Gate -->
+<div id="password-screen">
+  <div class="password-box">
+    <h2>Before you enter...</h2>
+    <p>Where have we had the most dates?</p>
+    <input type="text" id="password-input" placeholder="Your answer">
+    <button onclick="checkPassword()">Enter</button>
+    <p id="password-error"></p>
+  </div>
+</div>
 <!-- ── 1. Scanned letter ── -->
 <div id="letter">
   <!-- Replace letter.jpg with your scan of page 1 -->
@@ -555,6 +602,22 @@ function init() {
   draw();
 }
 
+ function checkPassword() {
+  const answer = document.getElementById("password-input").value.trim();
+
+  if (answer === "mekong" || answer === "Mekong") {
+    document.getElementById("password-screen").style.display = "none";
+  } else {
+    document.getElementById("password-error").textContent =
+      "That's not the right answer ❤️";
+  }
+}
+
+document.getElementById("password-input").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    checkPassword();
+  }
+});
 init();
 </script>
 </body>
